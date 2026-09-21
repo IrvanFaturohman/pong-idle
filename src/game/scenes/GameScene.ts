@@ -1,16 +1,15 @@
 import Phaser from 'phaser';
-import { ARENA, AUTO, BALLS, BOOST, COLORS, CSS_COLORS, DEPTH, JUICE, MODE_RULES, PADDLES, PHYSICS, TIMING, type ModeRules } from '../config';
+import { ARENA, BALLS, BOOST, COLORS, DEPTH, JUICE, PADDLES, PHYSICS, TIMING } from '../config';
 import { ctx, saveNow } from '../context';
 import { ballValue, comboMultiplier, ECONOMY } from '../data/economy';
 import { FINAL_MAP_INDEX } from '../data/maps';
 import { Ball } from '../entities/Ball';
 import { Paddle, railFor, sideCapacity } from '../entities/Paddle';
-import { AutoPilot } from '../systems/AutoPilot';
 import { bus } from '../systems/EventBus';
 import { JuiceManager } from '../systems/JuiceManager';
 import { MapManager, type ObstacleRuntime } from '../systems/MapManager';
 import { MergeSystem } from '../systems/MergeSystem';
-import type { GameMode, PurchaseResult, Side, Vec2 } from '../types';
+import type { PurchaseResult, Side, Vec2 } from '../types';
 import { angleDiff, clamp, clampDirection, damp, degToRad, randRange, randSign, rotate } from '../utils/math';
 
 type SpawnMode = 'load' | 'buy' | 'merge' | 'respawn';
@@ -33,18 +32,6 @@ interface Drag {
   last: number;
   travelled: number;
   reported: boolean;
-}
-
-/** Auto mode: a paddle picked up by the player on its way to another side. */
-interface Carry {
-  paddle: Paddle;
-  pointerId: number;
-  /** Side it would land on if released now. */
-  side: Side;
-  /** That side has no room left. */
-  full: boolean;
-  x: number;
-  y: number;
 }
 
 const SIDES: readonly Side[] = ['top', 'bottom', 'left', 'right'];
@@ -72,12 +59,8 @@ export class GameScene extends Phaser.Scene {
   juice!: JuiceManager;
   merger!: MergeSystem;
   transitioning = false;
-  mode: GameMode = 'classic';
-  private rules: ModeRules = MODE_RULES.classic;
-  /** Classic: the fixed full-width paddle that covers the whole top wall. */
+  /** The fixed full-width paddle that covers the whole top wall. */
   private topBar: Paddle | null = null;
-  private autopilot: AutoPilot | null = null;
-  private carry: Carry | null = null;
 
   private trailGfx!: Phaser.GameObjects.Graphics;
   private highlightGfx!: Phaser.GameObjects.Graphics;
@@ -125,20 +108,13 @@ export class GameScene extends Phaser.Scene {
     this.trailGfx = this.add.graphics().setDepth(DEPTH.trails);
     this.highlightGfx = this.add.graphics().setDepth(DEPTH.fx);
     this.merger = new MergeSystem(this);
-    this.mode = c.mode;
-    this.rules = MODE_RULES[this.mode];
-    this.autopilot = this.mode === 'auto' ? new AutoPilot(this) : null;
-    this.carry = null;
-    this.topBar = null;
-    if (this.rules.fullTopBar) {
-      const rail = railFor('top');
-      this.topBar = new Paddle(this, 'top', 0.5, this.map.def.palette.paddle, { length: rail.end - rail.start, fixed: true });
-      this.paddleByBody.set(this.topBar.body, this.topBar);
-    }
+    const topRail = railFor('top');
+    this.topBar = new Paddle(this, 'top', 0.5, this.map.def.palette.paddle, { length: topRail.end - topRail.start, fixed: true });
+    this.paddleByBody.set(this.topBar.body, this.topBar);
 
     for (const p of c.state.paddles) {
       // Only movable sides, and never overfill a rail, even if a save says otherwise.
-      const ok = this.rules.movableSides.includes(p.side) && this.freeSlots(p.side) > 0;
+      const ok = PADDLES.movableSides.includes(p.side) && this.freeSlots(p.side) > 0;
       this.addPaddle(ok ? p.side : this.roomiestSide(), p.pos, false);
     }
     this.enforcePaddleSpacing();
@@ -303,7 +279,6 @@ export class GameScene extends Phaser.Scene {
 
   private addPaddle(side: Side, normalizedPos: number, animate: boolean): Paddle {
     const paddle = new Paddle(this, side, normalizedPos, this.map.def.palette.paddle);
-    if (this.mode === 'auto') paddle.speedLimit = AUTO.paddleSpeed;
     this.paddleByBody.set(paddle.body, paddle);
     this.paddles.push(paddle);
     if (animate) {
@@ -317,20 +292,13 @@ export class GameScene extends Phaser.Scene {
     return this.paddles.filter((p) => p.side === side).sort((a, b) => a.pos - b.pos);
   }
 
-  private removePaddle(paddle: Paddle): void {
-    this.paddleByBody.delete(paddle.body);
-    const i = this.paddles.indexOf(paddle);
-    if (i >= 0) this.paddles.splice(i, 1);
-    paddle.destroy();
-  }
-
   private freeSlots(side: Side): number {
     return sideCapacity(side) - this.paddlesOn(side).length;
   }
 
   /** The movable side with the most free room on its rail. */
   private roomiestSide(): Side {
-    const sides = this.rules.movableSides;
+    const sides = PADDLES.movableSides;
     let best: Side = sides[0];
     for (const side of sides) if (this.freeSlots(side) > this.freeSlots(best)) best = side;
     return best;
@@ -396,10 +364,6 @@ export class GameScene extends Phaser.Scene {
   private releaseDrags(): void {
     for (const d of this.drags) d.paddle.dragging = false;
     this.drags = [];
-    if (this.carry) {
-      this.carry.paddle.endCarry();
-      this.carry = null;
-    }
   }
 
   private onPointerDown(pointer: Phaser.Input.Pointer): void {
@@ -419,10 +383,6 @@ export class GameScene extends Phaser.Scene {
     }
     if (!best) {
       this.tapBoost(pointer.x, pointer.y);
-      return;
-    }
-    if (this.mode === 'auto') {
-      if (!this.carry) this.startCarry(best, pointer);
       return;
     }
     best.dragging = true;
@@ -475,84 +435,9 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  // =================================================================== auto mode: carrying paddles
-
-  private startCarry(paddle: Paddle, pointer: Phaser.Input.Pointer): void {
-    paddle.startCarry();
-    this.carry = { paddle, pointerId: pointer.id, side: paddle.side, full: false, x: pointer.x, y: pointer.y };
-    ctx().audio.uiClick();
-    ctx().haptics.pulse(8, 0);
-  }
-
-  /** Side whose wall is closest to a point (where a released paddle would land). */
-  private nearestSide(x: number, y: number): Side {
-    const d: Record<Side, number> = {
-      top: Math.abs(y - ARENA.top),
-      bottom: Math.abs(ARENA.bottom - y),
-      left: Math.abs(x - ARENA.left),
-      right: Math.abs(ARENA.right - x),
-    };
-    let best: Side = 'top';
-    for (const side of SIDES) if (d[side] < d[best]) best = side;
-    return best;
-  }
-
-  private updateCarry(): void {
-    const carry = this.carry;
-    if (!carry) return;
-    const c = ctx();
-    const pointer = this.input.manager.pointers.find((p) => p.id === carry.pointerId);
-    if (!pointer || !pointer.isDown || c.modalOpen || c.orientationBlocked) {
-      this.dropCarry();
-      return;
-    }
-    carry.x = pointer.x;
-    carry.y = pointer.y;
-    carry.side = this.nearestSide(pointer.x, pointer.y);
-    carry.full = carry.side !== carry.paddle.side && this.freeSlots(carry.side) <= 0;
-    carry.paddle.carryTo(pointer.x, pointer.y, railFor(carry.side).rotation, carry.full);
-  }
-
-  /** Release: land on the nearest side if it has room, otherwise glide back home. */
-  private dropCarry(): void {
-    const carry = this.carry;
-    if (!carry) return;
-    this.carry = null;
-    const { paddle, side, full, x, y } = carry;
-    const c = ctx();
-
-    if (side === paddle.side || full) {
-      paddle.endCarry();
-      if (full) {
-        c.audio.error();
-        this.juice.label(x, y - 70, 'SIDE FULL', CSS_COLORS.coral, 44, 800);
-      }
-      return;
-    }
-
-    const rail = railFor(side);
-    const along = rail.axis === 'x' ? x : y;
-    const normalized = (along - rail.min) / Math.max(1, rail.max - rail.min);
-    const from = { x: paddle.container.x, y: paddle.container.y, rotation: paddle.container.rotation };
-    this.removePaddle(paddle);
-    const moved = this.addPaddle(side, normalized, false);
-    this.moveOnRail(moved, moved.pos);
-    moved.snapTo(moved.target);
-    moved.glideFrom(from.x, from.y, from.rotation);
-
-    const w = moved.worldCenter();
-    this.map.flashRail(side, 0.8);
-    this.juice.sparksAt(w.x, w.y, Math.atan2(rail.normal.y, rail.normal.x) * RAD_TO_DEG, COLORS.yellow, 10);
-    this.juice.ring(w.x, w.y, COLORS.yellow, 40, 170, 380, 6);
-    c.audio.addPaddle();
-    c.haptics.pulse(12, 0);
-    this.persist();
-    bus.emit('paddle-moved', side);
-  }
-
   /** Where a newly bought paddle goes: the purchase order, unless that rail is already full. */
   private sideForNewPaddle(): Side {
-    const order = this.rules.purchaseOrder;
+    const order = PADDLES.purchaseOrder;
     const preferred = order[ctx().state.paddlesPurchased % order.length];
     return this.freeSlots(preferred) > 0 ? preferred : this.roomiestSide();
   }
@@ -955,9 +840,7 @@ export class GameScene extends Phaser.Scene {
     c.state.stats.playTimeMs += frameMs;
 
     this.updateDrags();
-    this.updateCarry();
     this.updateBoost(dt);
-    this.autopilot?.update(this.boost);
     for (const p of this.paddles) p.update(dt);
     this.topBar?.update(dt);
     this.updateRails();
@@ -994,23 +877,17 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  /**
-   * Rails are faint where paddles sit and bright while one is being dragged.
-   * While carrying a paddle (auto mode) every rail shows as a drop target.
-   */
+  /** Rails are faint where paddles sit and bright while one is being dragged. */
   private updateRails(): void {
-    const carry = this.carry;
     for (const side of SIDES) {
       let has = false;
       let active = false;
       for (const p of this.paddles) {
-        if (p.side !== side || p.carried) continue;
+        if (p.side !== side) continue;
         has = true;
         if (p.dragging) active = true;
       }
-      let alpha = active ? 0.95 : has ? 0.16 : 0;
-      if (carry) alpha = side === carry.side && !carry.full ? 1 : 0.3;
-      this.map.setRailAlpha(side, alpha);
+      this.map.setRailAlpha(side, active ? 0.95 : has ? 0.16 : 0);
     }
   }
 

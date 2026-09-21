@@ -2,13 +2,12 @@ import { AudioManager } from './systems/AudioManager';
 import { EconomySystem } from './systems/EconomySystem';
 import { Haptics } from './systems/Haptics';
 import { SaveSystem } from './systems/SaveSystem';
-import type { GameMode, GameState } from './types';
+import type { GameState } from './types';
 
 /**
  * Shared, scene-independent services. Created once in `main.ts` before Phaser boots.
  */
 export interface GameContext {
-  mode: GameMode;
   state: GameState;
   saves: SaveSystem;
   economy: EconomySystem;
@@ -22,15 +21,14 @@ export interface GameContext {
 
 let context: GameContext | null = null;
 
-export function createContext(mode: GameMode): GameContext {
-  const saves = new SaveSystem(mode);
+export function createContext(): GameContext {
+  const saves = new SaveSystem();
   const { state } = saves.load();
   const audio = new AudioManager(!state.settings.sound);
   context = {
-    mode,
     state,
     saves,
-    economy: new EconomySystem(state, mode),
+    economy: new EconomySystem(state),
     audio,
     haptics: new Haptics(state.settings.haptics),
     modalOpen: false,

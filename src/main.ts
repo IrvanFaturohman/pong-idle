@@ -5,11 +5,8 @@ import { createContext } from './game/context';
 import { BootScene } from './game/scenes/BootScene';
 import { GameScene } from './game/scenes/GameScene';
 import { UIScene } from './game/scenes/UIScene';
-import type { GameMode } from './game/types';
 
-// Each game page declares its version on <html data-mode="classic|auto">.
-const mode: GameMode = document.documentElement.dataset.mode === 'auto' ? 'auto' : 'classic';
-const context = createContext(mode);
+const context = createContext();
 context.audio.attachUnlock();
 
 // Block browser gestures that fight with gameplay: pinch zoom (iOS), double-tap zoom,

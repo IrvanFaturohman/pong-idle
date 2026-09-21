@@ -1,4 +1,4 @@
-import type { GameMode, Side } from './types';
+import type { Side } from './types';
 
 /**
  * Central tuning file for layout, physics, paddles, audio and "juice".
@@ -123,6 +123,17 @@ export const PADDLES = {
   sameSideGap: 16,
   /** Distance kept free at both ends of the left/right rails so side paddles never overlap top/bottom ones. */
   cornerClearance: 14,
+  /**
+   * The whole top wall is one fixed full-width paddle (every top bounce pays).
+   * The player drags the paddles on these sides.
+   */
+  movableSides: ['bottom', 'left', 'right'] as readonly Side[],
+  /** Movable paddles a new game starts with. */
+  initialSides: ['bottom', 'left', 'right'] as readonly Side[],
+  /** Sides of the paddles bought afterwards, in purchase order (full rails are skipped). */
+  purchaseOrder: ['bottom', 'left', 'right', 'bottom', 'left', 'right'] as readonly Side[],
+  /** Maximum number of movable paddles. */
+  maxCount: 9,
   /** Generous invisible touch area around each paddle. */
   hitboxAlongExtra: 70,
   hitboxOutside: 60,
@@ -142,37 +153,6 @@ export const PADDLES = {
   dragScale: 1.07,
   maxTiltDeg: 5,
 } as const;
-
-export interface ModeRules {
-  /** Sides whose paddles the player controls / can buy for. */
-  movableSides: readonly Side[];
-  /** Movable paddles a new game starts with. */
-  initialSides: readonly Side[];
-  /** Sides of the paddles bought afterwards, in purchase order (full rails are skipped). */
-  purchaseOrder: readonly Side[];
-  /** Maximum number of movable paddles. */
-  maxPaddles: number;
-  /** Classic: the whole top wall is one fixed paddle, so every top bounce pays. */
-  fullTopBar: boolean;
-}
-
-/** Per-version rules. */
-export const MODE_RULES: Record<GameMode, ModeRules> = {
-  classic: {
-    movableSides: ['bottom', 'left', 'right'],
-    initialSides: ['bottom', 'left', 'right'],
-    purchaseOrder: ['bottom', 'left', 'right', 'bottom', 'left', 'right'],
-    maxPaddles: 9,
-    fullTopBar: true,
-  },
-  auto: {
-    movableSides: ['top', 'bottom', 'left', 'right'],
-    initialSides: ['top', 'bottom', 'left', 'right'],
-    purchaseOrder: ['bottom', 'top', 'left', 'right'],
-    maxPaddles: 8,
-    fullTopBar: false,
-  },
-};
 
 export const AUDIO = {
   masterVolume: 0.55,
@@ -209,18 +189,6 @@ export const JUICE = {
   floatTextMergeWindowMs: 260,
   walletLerp: 9,
   hapticPaddleMinLevel: 4,
-} as const;
-
-/** Auto mode: AI-driven paddles that the player re-assigns to sides. */
-export const AUTO = {
-  /** Top rail speed of an AI paddle (px/s, scaled by the tap boost). Lower = more misses. */
-  paddleSpeed: 640,
-  /** Balls further away than this (in 1/60 s frames) are ignored by the AI. */
-  horizonFrames: 150,
-  /** The AI aims slightly off-center (up to ± this many px) so rebound angles vary. */
-  aimSpread: 38,
-  /** Scale of a paddle while it is being carried to another side. */
-  carryScale: 1.12,
 } as const;
 
 /** Tap-to-speed-up: every tap on the open arena pushes the simulation faster for a moment. */

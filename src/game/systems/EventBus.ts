@@ -11,8 +11,6 @@ export interface BusEvents {
   'speed-boost': [multiplier: number];
   'ball-added': [];
   'paddle-added': [side: Side];
-  /** Auto mode: a paddle was carried to a different side. */
-  'paddle-moved': [side: Side];
   'merge-started': [level: number];
   'merged': [newLevel: number];
   /** Wallet decreased because of a purchase. */

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
-import { ARENA, AUTO, CATEGORY, COLORS, DEPTH, JUICE, PADDLES } from '../config';
+import { ARENA, CATEGORY, DEPTH, JUICE, PADDLES } from '../config';
 import type { Side, Vec2 } from '../types';
-import { angleDiff, clamp, damp, degToRad } from '../utils/math';
+import { clamp, damp, degToRad } from '../utils/math';
 import { ensurePaddleTextures } from '../utils/textures';
 
 export interface Rail {
@@ -97,10 +97,6 @@ export class Paddle {
   /** Smoothed velocity along the rail (px/s). */
   vel = 0;
   dragging = false;
-  /** Top speed along the rail (px/s). Auto mode lowers it so the AI can miss. */
-  speedLimit: number = PADDLES.maxSpeed;
-  /** Auto mode: the player has picked this paddle up to move it to another side. */
-  carried = false;
 
   private readonly face: Phaser.GameObjects.Image;
   private readonly flash: Phaser.GameObjects.Image;
@@ -114,15 +110,6 @@ export class Paddle {
   private dragAmount = 0;
   /** 0..1 build-in animation progress (1 = fully built). */
   appear = 1;
-  private color: number;
-  private carryX = 0;
-  private carryY = 0;
-  private carryRot = 0;
-  private carryWarn = false;
-  /** Visual offset from the rail that springs back to zero (after a drop / side change). */
-  private offX = 0;
-  private offY = 0;
-  private offRot = 0;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -134,7 +121,6 @@ export class Paddle {
     this.length = options.length ?? PADDLES.length;
     this.fixed = options.fixed ?? false;
     this.rail = railFor(side, this.length);
-    this.color = color;
     this.pos = this.fromNormalized(normalizedPos);
     this.target = this.pos;
 
@@ -183,46 +169,7 @@ export class Paddle {
   }
 
   setColor(color: number): void {
-    this.color = color;
     this.face.setTint(color);
-  }
-
-  /** Lift the paddle off its rail; it stops colliding until it is dropped. */
-  startCarry(): void {
-    this.carried = true;
-    this.carryX = this.container.x;
-    this.carryY = this.container.y;
-    this.carryRot = this.container.rotation;
-    this.body.collisionFilter.mask = 0;
-  }
-
-  /** Follow the finger; `rotation` previews the orientation of the side it would land on. */
-  carryTo(x: number, y: number, rotation: number, warn: boolean): void {
-    this.carryX = x;
-    this.carryY = y;
-    this.carryRot = rotation;
-    if (warn !== this.carryWarn) {
-      this.carryWarn = warn;
-      this.face.setTint(warn ? COLORS.coral : this.color);
-    }
-  }
-
-  /** Put the paddle back on its own rail, gliding from wherever it was released. */
-  endCarry(): void {
-    this.carried = false;
-    this.carryWarn = false;
-    this.face.setTint(this.color);
-    this.body.collisionFilter.mask = CATEGORY.ball;
-    this.glideFrom(this.container.x, this.container.y, this.container.rotation);
-  }
-
-  /** Start visually at (x, y, rotation) and spring onto the rail. */
-  glideFrom(x: number, y: number, rotation: number): void {
-    const w = this.worldCenter();
-    this.offX = x - w.x;
-    this.offY = y - w.y;
-    this.offRot = angleDiff(rotation, this.rail.rotation);
-    this.container.setPosition(x, y).setRotation(rotation);
   }
 
   /** Is the point inside the generous touch area of this paddle? */
@@ -260,14 +207,10 @@ export class Paddle {
 
   update(dt: number): void {
     if (dt <= 0) return;
-    if (this.carried) {
-      this.updateCarried(dt);
-      return;
-    }
     const prev = this.pos;
     // Exponential follow, capped by a max speed so a fast swipe never teleports into balls.
     let next = this.pos + (this.target - this.pos) * damp(PADDLES.followSharpness, dt);
-    const maxStep = this.speedLimit * dt;
+    const maxStep = PADDLES.maxSpeed * dt;
     next = clamp(next, this.pos - maxStep, this.pos + maxStep);
     this.pos = clamp(next, this.rail.min, this.rail.max);
     const instVel = (this.pos - prev) / dt;
@@ -294,12 +237,8 @@ export class Paddle {
     const n = this.rail.normal;
     const { x, y } = this.worldCenter();
     const back = this.kick + appearOffset;
-    const settle = Math.exp(-11 * dt);
-    this.offX *= settle;
-    this.offY *= settle;
-    this.offRot *= settle;
-    this.container.setPosition(x - n.x * back + this.offX, y - n.y * back + this.offY);
-    this.container.setRotation(this.rail.rotation + this.tilt + this.offRot);
+    this.container.setPosition(x - n.x * back, y - n.y * back);
+    this.container.setRotation(this.rail.rotation + this.tilt);
     const grow = 1 + (PADDLES.dragScale - 1) * this.dragAmount;
     const lengthScale = (0.25 + 0.75 * this.appear) * grow * (this.fixed ? 1 : 1 + this.squash * 0.18);
     const thickScale = grow * (1 - this.squash);
@@ -307,18 +246,6 @@ export class Paddle {
     this.flash.setScale(lengthScale, thickScale).setAlpha(this.flashAlpha);
     this.shadow.setScale(lengthScale * 1.02, 1 + this.dragAmount * 0.5).setAlpha((0.45 + this.dragAmount * 0.35) * this.appear);
     this.face.setAlpha(Math.min(1, this.appear * 1.6));
-  }
-
-  private updateCarried(dt: number): void {
-    const k = damp(26, dt);
-    const c = this.container;
-    c.setPosition(c.x + (this.carryX - c.x) * k, c.y + (this.carryY - c.y) * k);
-    c.setRotation(c.rotation + angleDiff(this.carryRot, c.rotation) * damp(16, dt));
-    this.dragAmount += (1 - this.dragAmount) * damp(16, dt);
-    const s = AUTO.carryScale;
-    this.face.setScale(s, s).setAlpha(0.95);
-    this.flash.setScale(s, s).setAlpha(0);
-    this.shadow.setScale(s * 1.05, 1.8).setAlpha(0.8);
   }
 
   private syncBody(): void {

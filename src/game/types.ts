@@ -1,10 +1,5 @@
 export type Side = 'top' | 'bottom' | 'left' | 'right';
 
-/**
- * classic = the player drags paddles along their rails.
- * auto    = paddles track balls on their own; the player moves them between sides.
- */
-export type GameMode = 'classic' | 'auto';
 
 export interface Vec2 {
   x: number;

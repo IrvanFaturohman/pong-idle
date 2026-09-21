@@ -82,10 +82,7 @@ export class Hud {
     const def = getMap(st.mapIndex);
     const tier = st.endless.tier;
     this.accent = def.palette.accent;
-    const parts = [`MAP ${def.id}`];
-    if (tier > 0) parts.push(`ENDLESS ${tier}`);
-    if (ctx().mode === 'auto') parts.push('AUTO');
-    this.mapLabel.setText(parts.join('  ·  '));
+    this.mapLabel.setText(tier > 0 ? `MAP ${def.id}  ·  ENDLESS ${tier}` : `MAP ${def.id}`);
     this.mapName.setText(def.name.toUpperCase());
     const mult = ctx().economy.multiplier;
     this.multText.setText(formatMultiplier(mult)).setColor(hexToCss(this.accent));

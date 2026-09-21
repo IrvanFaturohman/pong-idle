@@ -18,11 +18,10 @@ export default defineConfig({
     target: 'es2020',
     chunkSizeWarningLimit: 1800,
     rollupOptions: {
-      // Three pages: the version picker, and one page per game version.
+      // The game, plus a tiny redirect page so old /classic/ links keep working.
       input: {
         index: root('./index.html'),
         classic: root('./classic/index.html'),
-        auto: root('./auto/index.html'),
       },
       output: {
         manualChunks: {

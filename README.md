@@ -2,29 +2,17 @@
 
 A portrait mobile idle game prototype built with **Vite + TypeScript + Phaser 3 (Matter.js physics)**.
 
-Permanent balls bounce around an arena. You drag paddles along all four sides to catch them and earn money. Buy more balls, merge two balls of the same level into a stronger one, add paddles, and unlock new arenas. There's no opponent, no lives and no game over: a missed ball just bounces off the wall.
+Permanent balls bounce around an arena. The whole top wall is one big paddle, and you drag the paddles on the bottom, left and right to catch balls and earn money. Buy more balls, merge two balls of the same level into a stronger one, add paddles, and unlock new arenas. There's no opponent, no lives and no game over: a missed ball just bounces off the wall.
 
 Every graphic is drawn procedurally and every sound is synthesised with the Web Audio API, so there are no external assets.
 
 **Play online:** https://irvanfaturohman.github.io/pong-idle/
 
-## Two versions
-
-The start page lets you pick one. Each version keeps its own save.
-
-| | **Classic** (`/classic/`) | **Auto** (`/auto/`) |
-| --- | --- | --- |
-| Paddles | The whole top wall is one fixed full-width paddle (every top bounce pays). You drag the bottom, left and right paddles along their rails | Paddles slide along their rails by themselves, predicting where balls will arrive |
-| Your job | Catch balls by hand at the bottom and sides | Pick a paddle up and drop it on another side (e.g. bottom → right) to cover the busiest walls |
-| Limits | 3 movable paddles to start, up to 9 (3 per side) | 4 paddles to start, up to 8; each side holds as many as fit on its rail (3 on top/bottom, 4 on left/right). Dropping on a full side is rejected |
-
-The AI paddles are fast enough to catch every ball when there are only a few. With many balls they start missing, so where you place paddles and how many you buy matters.
-
 ## Install & run
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173 (start page), /classic/, /auto/, also reachable from your LAN
+npm run dev        # http://localhost:5173, also reachable from your LAN
 ```
 
 Production build:
@@ -42,14 +30,13 @@ Requires Node 20.19+ (or 22.12+).
 npm run deploy     # builds, then pushes dist/ to the gh-pages branch
 ```
 
-The repository's Pages source is the `gh-pages` branch. The build uses relative paths, so it works under `/pong-idle/`.
+The repository's Pages source is the `gh-pages` branch. The build uses relative paths, so it works under `/pong-idle/`. Old `/classic/` links redirect to the game.
 
 ## How to play
 
 | Action | Touch | Mouse |
 | --- | --- | --- |
-| Move a paddle (Classic) | Drag it along its rail | Click and drag |
-| Move a paddle to another side (Auto) | Drag it onto another wall and release | Click, drag, release |
+| Move a paddle | Drag it along its rail | Click and drag |
 | Speed up | Tap the open arena (taps stack up to ×2.5) | Click the arena |
 | Buy / merge / add paddle | Tap the cards at the bottom | Click |
 | Mute | Speaker button (top right) | |
@@ -60,9 +47,8 @@ The repository's Pages source is the `gh-pages` branch. The build uses relative 
 - **Ball values**: LV1 $1, LV2 $4, LV3 $12, LV4 $36, LV5 $108, then ×3 per level.
 - **Add Ball**: cheap on purpose ($12 × 1.1ⁿ), up to **40 balls**. A full, busy arena is the fun part. When it's full the card shows `FULL — MERGE BALLS`.
 - **Merge Balls**: free. One press merges **every pair at the lowest level at once** (the card shows e.g. `6 PAIRS · LV.1 → LV.2`). The pairs pop in a quick wave with a rising run of notes.
-- **Add Paddle**: $100 × 2.15ⁿ.
-  - Classic: bought in the order bottom, left, right (twice), up to 9.
-  - Auto: bought in the order bottom, top, left, right, up to 8.
+- **Paddles**: the top wall is a fixed full-width paddle, so every top bounce pays. You start with one paddle each on the bottom, left and right.
+- **Add Paddle**: $100 × 2.15ⁿ, added in the order bottom, left, right (twice), up to 9 paddles (3 per side).
 - **Tap to speed up**: tapping empty arena space speeds up the whole simulation for a moment. Speed lines and an edge glow show the boost, and a `SPEED ×N` pill shows the current multiplier.
 - **Maps** move forward on money *earned* on the current map. Spending never costs progress.
   1. **Classic Chamber**: ×1.0, clear at $10,000 earned
@@ -91,17 +77,15 @@ All tunable values live in data/config files:
 | `src/game/data/economy.ts` | Ball values, combo step/max, Add Ball & Add Paddle cost curves, income window, endless growth |
 | `src/game/data/maps.ts` | Map names, multipliers, targets, speed factors, palettes, obstacle layouts, spawn/merge point |
 | `src/game/data/levels.ts` | Ball colours per level, radius curve, star markers for high levels |
-| `src/game/config.ts` | Layout, ball speed, physics stability limits, paddle size, per-version paddle rules (`MODE_RULES`: sides, purchase order, max paddles, full top bar), max balls, Auto-mode AI speed (`AUTO`), tap boost, audio volume, juice intensities, timings |
+| `src/game/config.ts` | Layout, ball speed, physics stability limits, paddle size/sides/purchase order/max count, max balls, tap boost, audio volume, juice intensities, timings |
 
 ## Project structure
 
 ```
-index.html                Start page (pick a version)
-classic/index.html        Classic game page  (<html data-mode="classic">)
-auto/index.html           Auto game page     (<html data-mode="auto">)
+index.html                Game page
+classic/index.html        Redirect for old /classic/ links
 src/
-  main.ts                 Phaser config, gesture blocking, orientation handling, reads the mode
-  landing.css             Start page styles
+  main.ts                 Phaser config, gesture blocking, orientation handling
   styles.css              Full-screen portrait layout, safe areas, rotate overlay
   game/
     config.ts             Tunables (see above)
@@ -111,18 +95,18 @@ src/
     scenes/               BootScene (textures), GameScene (arena), UIScene (HUD & menus)
     entities/             Ball.ts, Paddle.ts
     systems/              EconomySystem, MapManager, SaveSystem, AudioManager, JuiceManager,
-                          MergeSystem, TutorialManager, AutoPilot (Auto-mode AI), Haptics, EventBus
+                          MergeSystem, TutorialManager, Haptics, EventBus
     ui/                   Hud, UpgradeButton, Panels (settings / complete), SpeedLines, widgets
     utils/                formatNumber, math, textures (procedural canvas textures)
 ```
 
 ## Saving & resetting
 
-Progress auto-saves to `localStorage` under the key `merge-pong-idle:save` (Classic) or `merge-pong-idle:auto:save` (Auto). It saves after every purchase, merge, map change and settings change, every 10 seconds, and whenever the tab is hidden or closed. The save is versioned: older saves are migrated, and corrupt data falls back to a fresh game.
+Progress auto-saves to `localStorage` under the key `merge-pong-idle:save`. It saves after every purchase, merge, map change and settings change, every 10 seconds, and whenever the tab is hidden or closed. The save is versioned: older saves are migrated, and corrupt data falls back to a fresh game.
 
 To reset:
-- In game: **Settings (gear) → Reset Progress → Reset** (only resets the version you're in), or
-- In the browser console: `localStorage.removeItem('merge-pong-idle:save')` (or the Auto key), then close the tab and open it again. The game saves when the page unloads, so a plain refresh right after removing the key would write the save back.
+- In game: **Settings (gear) → Reset Progress → Reset**, or
+- In the browser console: `localStorage.removeItem('merge-pong-idle:save')`, then close the tab and open it again. The game saves when the page unloads, so a plain refresh right after removing the key would write the save back.
 
 ## Notes
 

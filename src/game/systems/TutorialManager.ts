@@ -69,9 +69,7 @@ export class TutorialManager {
     this.bubble = scene.add.container(GAME_WIDTH / 2, 0, [this.bubbleBg, this.bubbleText, this.skip]).setDepth(depth + 2).setAlpha(0).setVisible(false);
     this.hand = scene.add.image(0, 0, TEX.hand).setOrigin(0.5, 0.06).setDepth(depth + 3).setVisible(false);
 
-    // Step 0 is "drag along the rail" in classic and "move to another side" in auto.
     bus.on('paddle-dragged', () => this.complete('drag'), this);
-    bus.on('paddle-moved', () => this.complete('drag'), this);
     bus.on('speed-boost', () => this.complete('tap'), this);
     bus.on('paddle-hit', this.onPaddleHit, this);
     bus.on('ball-added', () => this.complete('addBall'), this);
@@ -155,11 +153,7 @@ export class TutorialManager {
     const lowerTextY = ARENA.bottom - 290;
     switch (id) {
       case 'drag':
-        this.present(
-          c.mode === 'auto'
-            ? { key: 'move', text: 'Drag a paddle to another side', bubbleY: arenaTextY, dim: 'ui', hand: 'drag' }
-            : { key: 'drag', text: 'Drag the paddle', bubbleY: lowerTextY, dim: 'ui', hand: 'drag' },
-        );
+        this.present({ key: 'drag', text: 'Drag the paddle', bubbleY: lowerTextY, dim: 'ui', hand: 'drag' });
         break;
       case 'hit':
         this.present({ key: 'hit', text: 'Paddle hits earn cash', bubbleY: arenaTextY, dim: 'none' });
@@ -294,28 +288,11 @@ export class TutorialManager {
     g.strokeRoundedRect(r.x, r.y, r.width, r.height, 40);
   }
 
-  /**
-   * Classic: the hand sweeps along the bottom paddle's rail.
-   * Auto: it picks up the bottom paddle and carries it over to the right side.
-   */
+  /** The drag hand follows the bottom paddle and sweeps left and right along its rail. */
   private updateHand(): void {
     if (this.current?.hand !== 'drag') return;
-    const anchor = this.arena.paddleAnchor('bottom') ?? this.arena.paddleAnchor('top');
+    const anchor = this.arena.paddleAnchor('bottom');
     if (!anchor) return;
-    if (ctx().mode === 'auto') {
-      const cycle = (this.time % 2.4) / 2.4;
-      const u = clamp((cycle - 0.15) / 0.55, 0, 1);
-      const e = u * u * (3 - 2 * u);
-      const endX = ARENA.right - 40;
-      const endY = ARENA.centerY + 200;
-      // Curved path: bow inward so the gesture reads as "carry across".
-      const x = anchor.x + (endX - anchor.x) * e - Math.sin(e * Math.PI) * 60;
-      const y = anchor.y + (endY - anchor.y) * e - Math.sin(e * Math.PI) * 120;
-      this.hand.setPosition(x, y + 6);
-      this.hand.setAlpha(cycle > 0.85 ? 1 - (cycle - 0.85) / 0.15 : 1);
-      this.hand.setScale(cycle < 0.12 || cycle > 0.72 ? 1 : 0.9);
-      return;
-    }
     const sweep = Math.sin(this.time * 2.4) * 150;
     const x = clamp(anchor.x + sweep, ARENA.left + 120, ARENA.right - 120);
     this.hand.setPosition(x, anchor.y + 6);

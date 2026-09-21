@@ -103,13 +103,9 @@ export class SettingsPanel extends Modal {
       saveNow();
     });
 
-    const reset = new PillButton(scene, 0, -half + 560, 560, 100, 'RESET PROGRESS', COLORS.coral, CSS_COLORS.coral, () => this.showConfirm(true), true);
-    // Back to the version picker (progress is saved on page hide).
-    const menu = new PillButton(scene, 0, -half + 690, 560, 100, 'MAIN MENU', COLORS.textSecondary, CSS_COLORS.textPrimary, () => {
-      window.location.href = '../';
-    }, true);
-    const done = new PillButton(scene, 0, half - 100, 560, 112, 'CLOSE', COLORS.yellow, CSS_COLORS.ink, () => this.close());
-    this.main.add([rowBg, soundLabel, soundToggle, hapticLabel, hapticNote, hapticToggle, reset, menu, done]);
+    const reset = new PillButton(scene, 0, -half + 590, 560, 104, 'RESET PROGRESS', COLORS.coral, CSS_COLORS.coral, () => this.showConfirm(true), true);
+    const done = new PillButton(scene, 0, half - 110, 560, 112, 'CLOSE', COLORS.yellow, CSS_COLORS.ink, () => this.close());
+    this.main.add([rowBg, soundLabel, soundToggle, hapticLabel, hapticNote, hapticToggle, reset, done]);
 
     // Confirmation step for the destructive reset.
     this.confirm = scene.add.container(0, 0).setVisible(false);
