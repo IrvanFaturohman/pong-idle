@@ -1,0 +1,384 @@
+:root {
+  --bg: #0f131c;
+  --bg-outer: #0a0d14;
+  --surface: #171d28;
+  --card: #1b2230;
+  --border: #2b3444;
+  --yellow: #ffc83d;
+  --green: #64e572;
+  --coral: #ff657a;
+  --sky: #5db8ff;
+  --text: #f5f7fa;
+  --text-2: #98a3b5;
+  --font: Inter, ui-rounded, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255, 200, 61, 0.08), transparent 55%),
+    radial-gradient(ellipse at 50% 100%, rgba(93, 184, 255, 0.06), transparent 60%),
+    var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.landing {
+  max-width: 460px;
+  margin: 0 auto;
+  padding: calc(40px + env(safe-area-inset-top, 0px)) 16px calc(32px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* ---------- Brand ---------- */
+.brand {
+  text-align: center;
+}
+
+.logo {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 18px;
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow:
+    inset 0 0 0 2px var(--border),
+    0 14px 30px rgba(0, 0, 0, 0.45);
+}
+
+.logo-ball {
+  position: absolute;
+  left: 50%;
+  top: 14px;
+  width: 20px;
+  height: 20px;
+  margin-left: -10px;
+  border-radius: 50%;
+  background: #ff7e8a;
+  animation: logo-bounce 0.9s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+}
+
+.logo-paddle {
+  position: absolute;
+  left: 50%;
+  bottom: 13px;
+  width: 38px;
+  height: 8px;
+  margin-left: -19px;
+  border-radius: 4px;
+  background: var(--yellow);
+}
+
+@keyframes logo-bounce {
+  to {
+    transform: translateY(20px);
+  }
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.brand p {
+  margin: 10px auto 0;
+  max-width: 34ch;
+  color: var(--text-2);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* ---------- Mode cards ---------- */
+.modes {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mode {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-height: 150px;
+  padding: 16px;
+  border-radius: 24px;
+  background: var(--card);
+  color: inherit;
+  text-decoration: none;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 16px 34px rgba(0, 0, 0, 0.4);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.mode:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 0 0 2px var(--yellow),
+    0 20px 40px rgba(0, 0, 0, 0.45);
+}
+
+.mode:active {
+  transform: scale(0.98);
+}
+
+.mode:focus-visible {
+  outline: 3px solid var(--yellow);
+  outline-offset: 3px;
+}
+
+.mode-text h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mode-text p {
+  margin: 6px 0 12px;
+  color: var(--text-2);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.tag {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(100, 229, 114, 0.15);
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.play {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: var(--yellow);
+  color: #1a1f2b;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.play::after {
+  content: '';
+  margin-left: 8px;
+  border-left: 7px solid currentColor;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+}
+
+/* ---------- Mini arena illustrations ---------- */
+.art {
+  position: relative;
+  flex: 0 0 96px;
+  width: 96px;
+  height: 124px;
+  border-radius: 14px;
+  background: linear-gradient(#1a212e, #151a24);
+  box-shadow: inset 0 0 0 2px var(--border);
+  overflow: hidden;
+}
+
+.pad {
+  position: absolute;
+  border-radius: 3px;
+  background: var(--yellow);
+}
+
+.pad-top,
+.pad-bottom {
+  left: 50%;
+  width: 30px;
+  height: 5px;
+  margin-left: -15px;
+}
+
+.pad-top {
+  top: 5px;
+}
+
+.pad-bottom {
+  bottom: 5px;
+}
+
+.pad-left,
+.pad-right {
+  top: 50%;
+  width: 5px;
+  height: 30px;
+  margin-top: -15px;
+}
+
+.pad-left {
+  left: 5px;
+}
+
+.pad-right {
+  right: 5px;
+}
+
+.dot {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.d1 {
+  background: #eef1f6;
+  animation: dot-a 2.2s linear infinite;
+}
+
+.d2 {
+  background: #ff7e8a;
+  animation: dot-b 2.8s linear infinite;
+}
+
+@keyframes dot-a {
+  0% { transform: translate(20px, 16px); }
+  25% { transform: translate(72px, 56px); }
+  50% { transform: translate(40px, 104px); }
+  75% { transform: translate(12px, 64px); }
+  100% { transform: translate(20px, 16px); }
+}
+
+@keyframes dot-b {
+  0% { transform: translate(70px, 100px); }
+  33% { transform: translate(14px, 40px); }
+  66% { transform: translate(60px, 14px); }
+  100% { transform: translate(70px, 100px); }
+}
+
+/* Classic: the player slides the bottom paddle. */
+.slide {
+  animation: slide-x 2.2s ease-in-out infinite alternate;
+}
+
+@keyframes slide-x {
+  from { transform: translateX(-22px); }
+  to { transform: translateX(22px); }
+}
+
+.arrow-h {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  width: 44px;
+  height: 2px;
+  margin-left: -22px;
+  background: rgba(255, 200, 61, 0.5);
+}
+
+.arrow-h::before,
+.arrow-h::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+}
+
+.arrow-h::before {
+  left: -4px;
+  border-right: 5px solid rgba(255, 200, 61, 0.5);
+}
+
+.arrow-h::after {
+  right: -4px;
+  border-left: 5px solid rgba(255, 200, 61, 0.5);
+}
+
+/* Auto: paddles drift on their own, one is carried from the bottom to the right side. */
+.auto-x {
+  animation: slide-x 1.6s ease-in-out infinite alternate;
+}
+
+.auto-y {
+  animation: slide-y 1.9s ease-in-out infinite alternate;
+}
+
+.auto-y2 {
+  animation: slide-y 1.4s ease-in-out infinite alternate-reverse;
+  margin-top: 4px;
+}
+
+@keyframes slide-y {
+  from { transform: translateY(-26px); }
+  to { transform: translateY(26px); }
+}
+
+.pad-move {
+  left: 50%;
+  bottom: 5px;
+  width: 30px;
+  height: 5px;
+  margin-left: -15px;
+  box-shadow: 0 0 0 2px rgba(255, 200, 61, 0.25);
+  animation: carry 3s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+@keyframes carry {
+  0%, 15% { transform: translate(0, 0) rotate(0deg); }
+  60%, 85% { transform: translate(28px, -40px) rotate(90deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+.arrow-c {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  width: 26px;
+  height: 26px;
+  border-right: 2px dashed rgba(255, 200, 61, 0.55);
+  border-bottom: 2px dashed rgba(255, 200, 61, 0.55);
+  border-bottom-right-radius: 26px;
+}
+
+footer p {
+  margin: 0;
+  text-align: center;
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  html,
+  body {
+    background-color: var(--bg-outer);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

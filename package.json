@@ -1,0 +1,22 @@
+{
+  "name": "merge-pong-idle",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Merge Pong Idle — a portrait mobile idle game prototype built with Phaser 3 + Matter.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "typecheck": "tsc --noEmit",
+    "deploy": "npm run build && gh-pages -d dist --nojekyll -m \"Deploy to GitHub Pages\""
+  },
+  "dependencies": {
+    "phaser": "^3.90.0"
+  },
+  "devDependencies": {
+    "gh-pages": "^6.3.0",
+    "typescript": "~5.9.3",
+    "vite": "^7.3.6"
+  }
+}

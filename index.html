@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0F131C" />
+    <meta name="description" content="Merge Pong Idle — bounce balls off paddles, merge them into stronger ones. Pick Classic or Auto." />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230F131C'/%3E%3Crect x='14' y='50' width='36' height='7' rx='3.5' fill='%23FFC83D'/%3E%3Ccircle cx='32' cy='28' r='11' fill='%23FF7E8A'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="/src/landing.css" />
+    <title>Merge Pong Idle</title>
+  </head>
+  <body>
+    <main class="landing">
+      <header class="brand">
+        <div class="logo" aria-hidden="true">
+          <span class="logo-ball"></span>
+          <span class="logo-paddle"></span>
+        </div>
+        <h1>Merge Pong Idle</h1>
+        <p>Bounce balls off paddles, earn cash, merge matching balls into stronger ones.</p>
+      </header>
+
+      <nav class="modes" aria-label="Choose a version">
+        <a class="mode" href="./classic/">
+          <div class="art art-classic" aria-hidden="true">
+            <span class="pad pad-top"></span>
+            <span class="pad pad-bottom slide"></span>
+            <span class="pad pad-left"></span>
+            <span class="pad pad-right"></span>
+            <span class="dot d1"></span>
+            <span class="dot d2"></span>
+            <span class="arrow-h"></span>
+          </div>
+          <div class="mode-text">
+            <h2>Classic</h2>
+            <p>You drag every paddle along its rail to catch the balls.</p>
+            <span class="play">Play Classic</span>
+          </div>
+        </a>
+
+        <a class="mode" href="./auto/">
+          <div class="art art-auto" aria-hidden="true">
+            <span class="pad pad-top auto-x"></span>
+            <span class="pad pad-left auto-y"></span>
+            <span class="pad pad-right auto-y2"></span>
+            <span class="pad pad-move"></span>
+            <span class="dot d1"></span>
+            <span class="dot d2"></span>
+            <span class="arrow-c"></span>
+          </div>
+          <div class="mode-text">
+            <h2>Auto <span class="tag">New</span></h2>
+            <p>Paddles chase the balls by themselves. You move them from side to side.</p>
+            <span class="play">Play Auto</span>
+          </div>
+        </a>
+      </nav>
+
+      <footer>
+        <p>Each version keeps its own progress. Tap the arena in either version to speed up.</p>
+      </footer>
+    </main>
+  </body>
+</html>
