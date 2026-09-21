@@ -46,7 +46,7 @@ The repository's Pages source is the `gh-pages` branch. The build uses relative 
 - **Combo**: each consecutive paddle hit adds +0.1 (up to ×2.0). Touching a bare wall resets it. Obstacles don't reset it.
 - **Ball values**: LV1 $1, LV2 $4, LV3 $12, LV4 $36, LV5 $108, then ×3 per level.
 - **Add Ball**: cheap on purpose ($12 × 1.1ⁿ), up to **40 balls**. A full, busy arena is the fun part. When it's full the card shows `FULL — MERGE BALLS`.
-- **Merge Balls**: free. One press merges **every pair at the lowest level at once** (the card shows e.g. `6 PAIRS · LV.1 → LV.2`). The pairs pop in a quick wave with a rising run of notes.
+- **Merge Balls**: free. Each press merges one pair at the lowest level (e.g. `2× LV.1 → LV.2`), picking the two closest balls. Tapping again while a merge is playing queues the next one (up to 5).
 - **Paddles**: the top wall is a fixed full-width paddle, so every top bounce pays. You start with one paddle each on the bottom, left and right.
 - **Add Paddle**: $100 × 2.15ⁿ, added in the order bottom, left, right (twice), up to 9 paddles (3 per side).
 - **Tap to speed up**: tapping empty arena space speeds up the whole simulation for a moment. Speed lines and an edge glow show the boost, and a `SPEED ×N` pill shows the current multiplier.

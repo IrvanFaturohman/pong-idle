@@ -44,6 +44,8 @@ const WALL_NORMALS: Record<Side, Vec2> = {
 const MIN_FROM_H = degToRad(PHYSICS.minAngleFromHorizontalDeg);
 const MIN_FROM_V = degToRad(PHYSICS.minAngleFromVerticalDeg);
 const HEALTH_INTERVAL_MS = 250;
+/** Merge taps made while a merge is animating are remembered (up to this many) and played in turn. */
+const MAX_QUEUED_MERGES = 5;
 const RAD_TO_DEG = 180 / Math.PI;
 
 /**
@@ -82,6 +84,7 @@ export class GameScene extends Phaser.Scene {
   private boost = 1;
   private boostTarget = 1;
   private lastBoostTap = -Infinity;
+  private queuedMerges = 0;
 
   constructor() {
     super('Game');
@@ -100,6 +103,7 @@ export class GameScene extends Phaser.Scene {
     this.sim.scale = 1;
     this.boost = 1;
     this.boostTarget = 1;
+    this.queuedMerges = 0;
 
     this.map = new MapManager(this);
     this.map.build(c.state.mapIndex);
@@ -735,18 +739,33 @@ export class GameScene extends Phaser.Scene {
     return 'ok';
   }
 
-  /** Merges every pair at the lowest level at once. */
+  /** Merges one pair (the lowest level). Taps during a merge queue up and run one after another. */
   tryMerge(): PurchaseResult {
+    const c = ctx();
+    if (this.merger.active && !this.transitioning && !c.modalOpen) {
+      if (this.merger.lowestLevel(this.balls) === null) return 'nomatch';
+      if (this.queuedMerges >= Math.min(MAX_QUEUED_MERGES, this.availablePairs())) return 'locked';
+      this.queuedMerges++;
+      return 'ok';
+    }
     if (this.isLocked()) return 'locked';
-    const pairs = this.merger.findPairs(this.balls);
-    if (pairs.length === 0) return 'nomatch';
-    this.merger.start(pairs);
-    return 'ok';
+    return this.startNextMerge() ? 'ok' : 'nomatch';
   }
 
-  /** How many pairs the next merge would combine (for the button label). */
-  mergePairCount(): number {
-    return this.merger.pairCount(this.balls);
+  private startNextMerge(): boolean {
+    const pair = this.merger.findPair(this.balls);
+    if (!pair) return false;
+    this.merger.start(pair[0], pair[1]);
+    return true;
+  }
+
+  /** Pairs that could still be merged right now (balls in an animation don't count). */
+  private availablePairs(): number {
+    const counts = new Map<number, number>();
+    for (const b of this.balls) if (b.body) counts.set(b.level, (counts.get(b.level) ?? 0) + 1);
+    let pairs = 0;
+    for (const n of counts.values()) pairs += Math.floor(n / 2);
+    return pairs;
   }
 
   // =================================================================== map flow
@@ -869,6 +888,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (!this.transitioning && !this.merger.active && c.economy.mapCleared) this.beginMapComplete();
+
+    // Run queued merge taps one at a time; a map transition or modal cancels the rest.
+    if (this.queuedMerges > 0 && !this.merger.active) {
+      this.queuedMerges--;
+      if (this.isLocked() || !this.startNextMerge()) this.queuedMerges = 0;
+    }
 
     this.saveTimer += frameMs;
     if (this.saveTimer >= TIMING.autosaveMs) {
