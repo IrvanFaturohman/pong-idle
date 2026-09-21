@@ -13,9 +13,6 @@ export const TEX = {
   dot: 'tex-dot',
   confetti: 'tex-confetti',
   confettiTri: 'tex-confetti-tri',
-  paddle: 'tex-paddle',
-  paddleFlash: 'tex-paddle-flash',
-  paddleShadow: 'tex-paddle-shadow',
   hand: 'tex-hand',
   vignette: 'tex-vignette',
 } as const;
@@ -45,6 +42,53 @@ export function roundRectPath(c: Ctx2D, x: number, y: number, w: number, h: numb
   c.lineTo(x, y + rr);
   c.arcTo(x, y, x + rr, y, rr);
   c.closePath();
+}
+
+export interface PaddleTextures {
+  face: string;
+  flash: string;
+  shadow: string;
+}
+
+/**
+ * Paddle textures for a given length, drawn in local space: long axis = x,
+ * +y = the face that looks into the arena. Created on first use and cached.
+ */
+export function ensurePaddleTextures(scene: Phaser.Scene, length: number): PaddleTextures {
+  const L = Math.round(length);
+  const T = PADDLES.thickness;
+  const keys = { face: `tex-paddle-${L}`, flash: `tex-paddle-flash-${L}`, shadow: `tex-paddle-shadow-${L}` };
+  const pad = 4;
+  canvasTexture(scene, keys.face, L + pad * 2, T + pad * 2, (c) => {
+    const g = c.createLinearGradient(0, pad, 0, pad + T);
+    g.addColorStop(0, '#c9ced8');
+    g.addColorStop(0.45, '#f4f5f8');
+    g.addColorStop(1, '#ffffff');
+    c.fillStyle = g;
+    roundRectPath(c, pad, pad, L, T, T / 2);
+    c.fill();
+    // Thin bright strip along the arena-facing edge.
+    c.fillStyle = 'rgba(255,255,255,0.9)';
+    roundRectPath(c, pad + 14, pad + T - 8, L - 28, 4, 2);
+    c.fill();
+  });
+  canvasTexture(scene, keys.flash, L + pad * 2, T + pad * 2, (c) => {
+    c.fillStyle = '#ffffff';
+    roundRectPath(c, pad, pad, L, T, T / 2);
+    c.fill();
+  });
+  canvasTexture(scene, keys.shadow, L + 80, T + 80, (c, w, h) => {
+    // Draw the shape far off-canvas and keep only its blurred shadow (works in every browser,
+    // unlike ctx.filter which Safari lacks).
+    const off = 4000;
+    c.shadowColor = 'rgba(0,0,0,0.85)';
+    c.shadowBlur = 22;
+    c.shadowOffsetX = off;
+    c.fillStyle = '#000000';
+    roundRectPath(c, 36 - off, 36, w - 72, h - 72, T / 2);
+    c.fill();
+  });
+  return keys;
 }
 
 export function generateTextures(scene: Phaser.Scene): void {
@@ -118,41 +162,7 @@ export function generateTextures(scene: Phaser.Scene): void {
     c.fill();
   });
 
-  // Paddle drawn in local space: long axis = x, +y = the face that looks into the arena.
-  const pad = 4;
-  const pw = PADDLES.length + pad * 2;
-  const ph = PADDLES.thickness + pad * 2;
-  canvasTexture(scene, TEX.paddle, pw, ph, (c) => {
-    const g = c.createLinearGradient(0, pad, 0, pad + PADDLES.thickness);
-    g.addColorStop(0, '#c9ced8');
-    g.addColorStop(0.45, '#f4f5f8');
-    g.addColorStop(1, '#ffffff');
-    c.fillStyle = g;
-    roundRectPath(c, pad, pad, PADDLES.length, PADDLES.thickness, PADDLES.thickness / 2);
-    c.fill();
-    // Thin bright strip along the arena-facing edge.
-    c.fillStyle = 'rgba(255,255,255,0.9)';
-    roundRectPath(c, pad + 14, pad + PADDLES.thickness - 8, PADDLES.length - 28, 4, 2);
-    c.fill();
-  });
-
-  canvasTexture(scene, TEX.paddleFlash, pw, ph, (c) => {
-    c.fillStyle = '#ffffff';
-    roundRectPath(c, pad, pad, PADDLES.length, PADDLES.thickness, PADDLES.thickness / 2);
-    c.fill();
-  });
-
-  canvasTexture(scene, TEX.paddleShadow, PADDLES.length + 80, PADDLES.thickness + 80, (c, w, h) => {
-    // Draw the shape far off-canvas and keep only its blurred shadow (works in every browser,
-    // unlike ctx.filter which Safari lacks).
-    const off = 4000;
-    c.shadowColor = 'rgba(0,0,0,0.85)';
-    c.shadowBlur = 22;
-    c.shadowOffsetX = off;
-    c.fillStyle = '#000000';
-    roundRectPath(c, 36 - off, 36, w - 72, h - 72, PADDLES.thickness / 2);
-    c.fill();
-  });
+  ensurePaddleTextures(scene, PADDLES.length);
 
   // Simple pointing hand for the tutorial (fingertip at the top center).
   canvasTexture(scene, TEX.hand, 128, 168, (c) => {

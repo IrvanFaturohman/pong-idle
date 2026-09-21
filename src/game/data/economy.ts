@@ -13,7 +13,8 @@ export const ECONOMY = {
     step: 0.1,
     max: 2,
   },
-  addBall: { base: 20, growth: 1.38 },
+  /** Cheap and gently rising: filling the arena with balls is the fun part. */
+  addBall: { base: 12, growth: 1.1 },
   addPaddle: { base: 100, growth: 2.15 },
   /** Rolling window used for the income-per-second display. */
   incomeWindowSeconds: 10,

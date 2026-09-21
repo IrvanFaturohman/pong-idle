@@ -1,6 +1,6 @@
 import { addBallCost, addPaddleCost, ECONOMY, mapMultiplier, mapTarget } from '../data/economy';
-import { PADDLES } from '../config';
-import type { GameState } from '../types';
+import { MODE_RULES } from '../config';
+import type { GameMode, GameState } from '../types';
 
 interface IncomeSample {
   time: number;
@@ -15,7 +15,10 @@ export class EconomySystem {
   private samples: IncomeSample[] = [];
   private readonly trackingStart = performance.now();
 
-  constructor(private readonly state: GameState) {}
+  constructor(
+    private readonly state: GameState,
+    private readonly mode: GameMode,
+  ) {}
 
   get wallet(): number {
     return this.state.wallet;
@@ -43,7 +46,7 @@ export class EconomySystem {
 
   /** Null once the paddle cap is reached. */
   get paddleCost(): number | null {
-    if (this.state.paddles.length >= PADDLES.maxCount) return null;
+    if (this.state.paddles.length >= MODE_RULES[this.mode].maxPaddles) return null;
     return addPaddleCost(this.state.paddlesPurchased);
   }
 

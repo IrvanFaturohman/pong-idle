@@ -9,7 +9,7 @@ export const MAPS: readonly MapDef[] = [
     id: 1,
     name: 'Classic Chamber',
     multiplier: 1,
-    target: 250,
+    target: 10000,
     speedFactor: 1,
     palette: {
       background: 0x0f131c,
@@ -31,7 +31,7 @@ export const MAPS: readonly MapDef[] = [
     id: 2,
     name: 'Diamond Core',
     multiplier: 1.5,
-    target: 2500,
+    target: 200000,
     speedFactor: 1.05,
     palette: {
       background: 0x11121f,
@@ -53,7 +53,7 @@ export const MAPS: readonly MapDef[] = [
     id: 3,
     name: 'Twin Bumpers',
     multiplier: 2.25,
-    target: 20000,
+    target: 1000000,
     speedFactor: 1.08,
     palette: {
       background: 0x0c1519,

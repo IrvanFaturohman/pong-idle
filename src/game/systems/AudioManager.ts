@@ -308,6 +308,20 @@ export class AudioManager {
     this.noise({ duration: 0.12, gain: 0.05, bandpass: 5000, q: 1.2 });
   }
 
+  /**
+   * One pop in a multi-pair merge wave: each successive pop climbs a pentatonic
+   * scale, so a big merge plays as a bright rising run.
+   */
+  mergeCascade(index: number, newLevel: number): void {
+    if (!this.canPlay('misc', 0)) return;
+    const scale = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24, 26, 28, 31];
+    const semis = scale[Math.min(index, scale.length - 1)] + Math.min(newLevel - 2, 8);
+    const f = 523.25 * Math.pow(2, semis / 12);
+    this.tone({ type: 'sine', freq: f * 1.25, freqEnd: f, glide: 0.025, attack: 0.003, decay: 0.2, gain: 0.13 });
+    this.tone({ type: 'triangle', freq: f * 2, attack: 0.002, decay: 0.08, gain: 0.035 });
+    if (index === 0) this.tone({ type: 'sine', freq: 120, freqEnd: 42, attack: 0.004, decay: 0.3, gain: 0.3 });
+  }
+
   uiClick(): void {
     if (!this.canPlay('ui', AUDIO.minIntervalMs.ui)) return;
     this.tone({ type: 'sine', freq: 1250 * this.jitter(0.02), freqEnd: 900, attack: 0.002, decay: 0.045, gain: 0.08 });

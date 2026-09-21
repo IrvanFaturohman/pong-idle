@@ -1,3 +1,5 @@
+import type { GameMode, Side } from './types';
+
 /**
  * Central tuning file for layout, physics, paddles, audio and "juice".
  * Economy numbers live in `data/economy.ts`, map definitions in `data/maps.ts`
@@ -101,7 +103,8 @@ export const PHYSICS = {
 } as const;
 
 export const BALLS = {
-  maxActive: 12,
+  /** Lots of balls is the fun part: the arena holds up to this many. */
+  maxActive: 40,
   baseRadius: 30,
   radiusPerLevel: 3,
   maxRadius: 48,
@@ -120,11 +123,6 @@ export const PADDLES = {
   sameSideGap: 16,
   /** Distance kept free at both ends of the left/right rails so side paddles never overlap top/bottom ones. */
   cornerClearance: 14,
-  maxCount: 8,
-  /** A new game starts with one paddle on every side. */
-  initialSides: ['top', 'bottom', 'left', 'right'] as const,
-  /** Sides of the paddles bought afterwards, in purchase order. */
-  purchaseOrder: ['bottom', 'top', 'left', 'right'] as const,
   /** Generous invisible touch area around each paddle. */
   hitboxAlongExtra: 70,
   hitboxOutside: 60,
@@ -144,6 +142,37 @@ export const PADDLES = {
   dragScale: 1.07,
   maxTiltDeg: 5,
 } as const;
+
+export interface ModeRules {
+  /** Sides whose paddles the player controls / can buy for. */
+  movableSides: readonly Side[];
+  /** Movable paddles a new game starts with. */
+  initialSides: readonly Side[];
+  /** Sides of the paddles bought afterwards, in purchase order (full rails are skipped). */
+  purchaseOrder: readonly Side[];
+  /** Maximum number of movable paddles. */
+  maxPaddles: number;
+  /** Classic: the whole top wall is one fixed paddle, so every top bounce pays. */
+  fullTopBar: boolean;
+}
+
+/** Per-version rules. */
+export const MODE_RULES: Record<GameMode, ModeRules> = {
+  classic: {
+    movableSides: ['bottom', 'left', 'right'],
+    initialSides: ['bottom', 'left', 'right'],
+    purchaseOrder: ['bottom', 'left', 'right', 'bottom', 'left', 'right'],
+    maxPaddles: 9,
+    fullTopBar: true,
+  },
+  auto: {
+    movableSides: ['top', 'bottom', 'left', 'right'],
+    initialSides: ['top', 'bottom', 'left', 'right'],
+    purchaseOrder: ['bottom', 'top', 'left', 'right'],
+    maxPaddles: 8,
+    fullTopBar: false,
+  },
+};
 
 export const AUDIO = {
   masterVolume: 0.55,
@@ -166,6 +195,10 @@ export const JUICE = {
   cameraKickBase: 0.5,
   cameraKickPerLevel: 0.8,
   cameraKickMax: 7,
+  /** At most one camera kick this often, so dozens of balls never turn into constant shaking. */
+  cameraKickMinIntervalMs: 90,
+  /** The full-width top bar reacts more gently (it gets hit constantly). */
+  fullBarFeedbackScale: 0.3,
   mergeShake: { duration: 140, intensity: 0.004 },
   mapCompleteShake: { duration: 600, intensity: 0.006 },
   hitParticlesBase: 5,

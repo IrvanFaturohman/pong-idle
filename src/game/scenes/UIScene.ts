@@ -239,8 +239,13 @@ export class UIScene extends Phaser.Scene {
     }
 
     const level = this.arena.lowestMergeLevel();
-    if (level === null) this.mergeBtn.setInfo('NO MATCH', 'disabled');
-    else this.mergeBtn.setInfo(`2× LV.${level} → LV.${level + 1}`, 'ready');
+    if (level === null) {
+      this.mergeBtn.setInfo('NO MATCH', 'disabled');
+    } else {
+      const pairs = this.arena.mergePairCount();
+      const arrow = `LV.${level} → LV.${level + 1}`;
+      this.mergeBtn.setInfo(pairs > 1 ? `${pairs} PAIRS\n${arrow}` : `2× ${arrow}`, 'ready');
+    }
 
     const paddleCost = e.paddleCost;
     if (paddleCost === null) this.addPaddleBtn.setInfo('MAX', 'disabled');

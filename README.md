@@ -14,9 +14,9 @@ The start page lets you pick one. Each version keeps its own save.
 
 | | **Classic** (`/classic/`) | **Auto** (`/auto/`) |
 | --- | --- | --- |
-| Paddles | You drag each paddle along its rail | Paddles slide along their rails by themselves, predicting where balls will arrive |
-| Your job | Catch balls by hand | Pick a paddle up and drop it on another side (e.g. bottom → right) to cover the busiest walls |
-| Limits | Up to 8 paddles | Up to 8 paddles; each side holds as many as fit on its rail (3 on top/bottom, 4 on left/right). Dropping on a full side is rejected |
+| Paddles | The whole top wall is one fixed full-width paddle (every top bounce pays). You drag the bottom, left and right paddles along their rails | Paddles slide along their rails by themselves, predicting where balls will arrive |
+| Your job | Catch balls by hand at the bottom and sides | Pick a paddle up and drop it on another side (e.g. bottom → right) to cover the busiest walls |
+| Limits | 3 movable paddles to start, up to 9 (3 per side) | 4 paddles to start, up to 8; each side holds as many as fit on its rail (3 on top/bottom, 4 on left/right). Dropping on a full side is rejected |
 
 The AI paddles are fast enough to catch every ball when there are only a few. With many balls they start missing, so where you place paddles and how many you buy matters.
 
@@ -58,14 +58,18 @@ The repository's Pages source is the `gh-pages` branch. The build uses relative 
 - **Paddle hits earn money**: `ball value × combo × map multiplier`.
 - **Combo**: each consecutive paddle hit adds +0.1 (up to ×2.0). Touching a bare wall resets it. Obstacles don't reset it.
 - **Ball values**: LV1 $1, LV2 $4, LV3 $12, LV4 $36, LV5 $108, then ×3 per level.
-- **Add Ball**: $20 × 1.38ⁿ, up to 12 balls. When the arena is full the card shows `FULL — MERGE BALLS`.
-- **Merge Balls**: free. Always merges the lowest-level pair (e.g. `2× LV.1 → LV.2`).
-- **Add Paddle**: you start with one paddle on each side (top, bottom, left, right). Four more can be bought for $100 × 2.15ⁿ, in the order bottom, top, left, right, up to 8 paddles.
+- **Add Ball**: cheap on purpose ($12 × 1.1ⁿ), up to **40 balls**. A full, busy arena is the fun part. When it's full the card shows `FULL — MERGE BALLS`.
+- **Merge Balls**: free. One press merges **every pair at the lowest level at once** (the card shows e.g. `6 PAIRS · LV.1 → LV.2`). The pairs pop in a quick wave with a rising run of notes.
+- **Add Paddle**: $100 × 2.15ⁿ.
+  - Classic: bought in the order bottom, left, right (twice), up to 9.
+  - Auto: bought in the order bottom, top, left, right, up to 8.
 - **Tap to speed up**: tapping empty arena space speeds up the whole simulation for a moment. Speed lines and an edge glow show the boost, and a `SPEED ×N` pill shows the current multiplier.
 - **Maps** move forward on money *earned* on the current map. Spending never costs progress.
-  1. **Classic Chamber**: ×1.0, clear at $250 earned
-  2. **Diamond Core**: ×1.5, a diamond bumper in the centre, 5% faster, clear at $2,500
-  3. **Twin Bumpers**: ×2.25, two round bumpers and a rotating bar, 8% faster, clear at $20,000
+  1. **Classic Chamber**: ×1.0, clear at $10,000 earned
+  2. **Diamond Core**: ×1.5, a diamond bumper in the centre, 5% faster, clear at $200,000
+  3. **Twin Bumpers**: ×2.25, two round bumpers and a rotating bar, 8% faster, clear at $1,000,000
+
+  In simulation, an active player reaches the Prototype Complete screen in about 15–20 minutes.
   4. After Map 3 you get a **Prototype Complete** screen with your stats. **Continue Endless** keeps you on Map 3, and each tier's target and multiplier go up.
 
 Balls, levels, money and paddles carry over between maps.
@@ -87,7 +91,7 @@ All tunable values live in data/config files:
 | `src/game/data/economy.ts` | Ball values, combo step/max, Add Ball & Add Paddle cost curves, income window, endless growth |
 | `src/game/data/maps.ts` | Map names, multipliers, targets, speed factors, palettes, obstacle layouts, spawn/merge point |
 | `src/game/data/levels.ts` | Ball colours per level, radius curve, star markers for high levels |
-| `src/game/config.ts` | Layout, ball speed, physics stability limits, paddle size/rails/purchase order, max balls/paddles, Auto-mode AI speed (`AUTO`), tap boost, audio volume, juice intensities, timings |
+| `src/game/config.ts` | Layout, ball speed, physics stability limits, paddle size, per-version paddle rules (`MODE_RULES`: sides, purchase order, max paddles, full top bar), max balls, Auto-mode AI speed (`AUTO`), tap boost, audio volume, juice intensities, timings |
 
 ## Project structure
 

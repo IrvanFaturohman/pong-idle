@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { ARENA, AUTO, CATEGORY, COLORS, DEPTH, JUICE, PADDLES } from '../config';
 import type { Side, Vec2 } from '../types';
 import { angleDiff, clamp, damp, degToRad } from '../utils/math';
-import { TEX } from '../utils/textures';
+import { ensurePaddleTextures } from '../utils/textures';
 
 export interface Rail {
   /** Axis the paddle slides along. */
@@ -23,13 +23,13 @@ export interface Rail {
 
 /** How many paddles fit on a side's rail with the minimum gap between them. */
 export function sideCapacity(side: Side): number {
-  const rail = railFor(side);
+  const rail = railFor(side, PADDLES.length);
   return Math.floor((rail.end - rail.start + PADDLES.sameSideGap) / (PADDLES.length + PADDLES.sameSideGap));
 }
 
-/** Geometry of each side's rail. Left/right rails stop short of the corners so paddles never overlap. */
-export function railFor(side: Side): Rail {
-  const L = PADDLES.length;
+/** Geometry of each side's rail for a paddle of `length`. Left/right rails stop short of the corners. */
+export function railFor(side: Side, length: number = PADDLES.length): Rail {
+  const L = length;
   const T = PADDLES.thickness;
   const gap = PADDLES.wallGap;
   const sideInset = gap + T + PADDLES.cornerClearance;
@@ -71,6 +71,13 @@ export function railFor(side: Side): Rail {
 
 let nextPaddleId = 1;
 
+export interface PaddleOptions {
+  /** Paddle length (defaults to PADDLES.length). */
+  length?: number;
+  /** A fixed paddle never moves or gets picked up (the classic full-width top bar). */
+  fixed?: boolean;
+}
+
 /**
  * A paddle locked to one side of the arena. It is a static Matter body that is
  * teleported along its rail each frame, with a spring-driven visual on top.
@@ -78,6 +85,8 @@ let nextPaddleId = 1;
 export class Paddle {
   readonly id = nextPaddleId++;
   readonly rail: Rail;
+  readonly length: number;
+  readonly fixed: boolean;
   readonly body: MatterJS.BodyType;
   readonly container: Phaser.GameObjects.Container;
 
@@ -120,8 +129,11 @@ export class Paddle {
     readonly side: Side,
     normalizedPos: number,
     color: number,
+    options: PaddleOptions = {},
   ) {
-    this.rail = railFor(side);
+    this.length = options.length ?? PADDLES.length;
+    this.fixed = options.fixed ?? false;
+    this.rail = railFor(side, this.length);
     this.color = color;
     this.pos = this.fromNormalized(normalizedPos);
     this.target = this.pos;
@@ -131,8 +143,8 @@ export class Paddle {
     this.body = scene.matter.add.rectangle(
       x,
       y,
-      horizontal ? PADDLES.length : PADDLES.thickness,
-      horizontal ? PADDLES.thickness : PADDLES.length,
+      horizontal ? this.length : PADDLES.thickness,
+      horizontal ? PADDLES.thickness : this.length,
       {
         isStatic: true,
         label: 'paddle',
@@ -144,9 +156,10 @@ export class Paddle {
       },
     );
 
-    this.shadow = scene.add.image(0, 4, TEX.paddleShadow).setAlpha(0.5);
-    this.face = scene.add.image(0, 0, TEX.paddle).setTint(color);
-    this.flash = scene.add.image(0, 0, TEX.paddleFlash).setAlpha(0);
+    const tex = ensurePaddleTextures(scene, this.length);
+    this.shadow = scene.add.image(0, 4, tex.shadow).setAlpha(0.5);
+    this.face = scene.add.image(0, 0, tex.face).setTint(color);
+    this.flash = scene.add.image(0, 0, tex.flash).setAlpha(0);
     this.container = scene.add.container(x, y, [this.shadow, this.face, this.flash]).setDepth(DEPTH.paddles);
     this.container.setRotation(this.rail.rotation);
   }
@@ -214,8 +227,9 @@ export class Paddle {
 
   /** Is the point inside the generous touch area of this paddle? */
   hitTest(px: number, py: number): boolean {
+    if (this.fixed) return false;
     const along = this.axisOf(px, py);
-    if (Math.abs(along - this.pos) > PADDLES.length / 2 + PADDLES.hitboxAlongExtra) return false;
+    if (Math.abs(along - this.pos) > this.length / 2 + PADDLES.hitboxAlongExtra) return false;
     // Signed distance from the wall line into the arena.
     let depth: number;
     if (this.side === 'top') depth = py - ARENA.top;
@@ -235,11 +249,13 @@ export class Paddle {
 
   /** Ball impact: squash, kick back toward the wall and flash. `strength` ~0.4..1.5. */
   hit(strength: number): void {
-    this.kick = JUICE.paddleKick * strength;
+    // The long fixed bar is hit constantly, so it only twitches.
+    const k = this.fixed ? JUICE.fullBarFeedbackScale : 1;
+    this.kick = Math.max(this.kick, JUICE.paddleKick * strength * k);
     this.kickVel = 0;
-    this.squash = Math.min(0.45, JUICE.paddleSquash * strength);
+    this.squash = Math.max(this.squash, Math.min(0.45, JUICE.paddleSquash * strength * k));
     this.squashVel = 0;
-    this.flashAlpha = Math.min(0.9, 0.45 + 0.3 * strength);
+    this.flashAlpha = Math.max(this.flashAlpha, Math.min(0.9, (0.45 + 0.3 * strength) * k));
   }
 
   update(dt: number): void {
@@ -285,7 +301,7 @@ export class Paddle {
     this.container.setPosition(x - n.x * back + this.offX, y - n.y * back + this.offY);
     this.container.setRotation(this.rail.rotation + this.tilt + this.offRot);
     const grow = 1 + (PADDLES.dragScale - 1) * this.dragAmount;
-    const lengthScale = (0.25 + 0.75 * this.appear) * grow * (1 + this.squash * 0.18);
+    const lengthScale = (0.25 + 0.75 * this.appear) * grow * (this.fixed ? 1 : 1 + this.squash * 0.18);
     const thickScale = grow * (1 - this.squash);
     this.face.setScale(lengthScale, thickScale);
     this.flash.setScale(lengthScale, thickScale).setAlpha(this.flashAlpha);

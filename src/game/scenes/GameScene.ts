@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ARENA, AUTO, BALLS, BOOST, COLORS, CSS_COLORS, DEPTH, JUICE, PADDLES, PHYSICS, TIMING } from '../config';
+import { ARENA, AUTO, BALLS, BOOST, COLORS, CSS_COLORS, DEPTH, JUICE, MODE_RULES, PADDLES, PHYSICS, TIMING, type ModeRules } from '../config';
 import { ctx, saveNow } from '../context';
 import { ballValue, comboMultiplier, ECONOMY } from '../data/economy';
 import { FINAL_MAP_INDEX } from '../data/maps';
@@ -73,6 +73,9 @@ export class GameScene extends Phaser.Scene {
   merger!: MergeSystem;
   transitioning = false;
   mode: GameMode = 'classic';
+  private rules: ModeRules = MODE_RULES.classic;
+  /** Classic: the fixed full-width paddle that covers the whole top wall. */
+  private topBar: Paddle | null = null;
   private autopilot: AutoPilot | null = null;
   private carry: Carry | null = null;
 
@@ -123,13 +126,20 @@ export class GameScene extends Phaser.Scene {
     this.highlightGfx = this.add.graphics().setDepth(DEPTH.fx);
     this.merger = new MergeSystem(this);
     this.mode = c.mode;
+    this.rules = MODE_RULES[this.mode];
     this.autopilot = this.mode === 'auto' ? new AutoPilot(this) : null;
     this.carry = null;
+    this.topBar = null;
+    if (this.rules.fullTopBar) {
+      const rail = railFor('top');
+      this.topBar = new Paddle(this, 'top', 0.5, this.map.def.palette.paddle, { length: rail.end - rail.start, fixed: true });
+      this.paddleByBody.set(this.topBar.body, this.topBar);
+    }
 
     for (const p of c.state.paddles) {
-      // Never overfill a rail, even if a save says otherwise.
-      const side = this.paddlesOn(p.side).length < sideCapacity(p.side) ? p.side : this.roomiestSide();
-      this.addPaddle(side, p.pos, false);
+      // Only movable sides, and never overfill a rail, even if a save says otherwise.
+      const ok = this.rules.movableSides.includes(p.side) && this.freeSlots(p.side) > 0;
+      this.addPaddle(ok ? p.side : this.roomiestSide(), p.pos, false);
     }
     this.enforcePaddleSpacing();
     const points = this.map.ringSpawnPoints(c.state.balls.length);
@@ -318,10 +328,11 @@ export class GameScene extends Phaser.Scene {
     return sideCapacity(side) - this.paddlesOn(side).length;
   }
 
-  /** The side with the most free room on its rail. */
+  /** The movable side with the most free room on its rail. */
   private roomiestSide(): Side {
-    let best: Side = SIDES[0];
-    for (const side of SIDES) if (this.freeSlots(side) > this.freeSlots(best)) best = side;
+    const sides = this.rules.movableSides;
+    let best: Side = sides[0];
+    for (const side of sides) if (this.freeSlots(side) > this.freeSlots(best)) best = side;
     return best;
   }
 
@@ -541,7 +552,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Where a newly bought paddle goes: the purchase order, unless that rail is already full. */
   private sideForNewPaddle(): Side {
-    const order = PADDLES.purchaseOrder;
+    const order = this.rules.purchaseOrder;
     const preferred = order[ctx().state.paddlesPurchased % order.length];
     return this.freeSlots(preferred) > 0 ? preferred : this.roomiestSide();
   }
@@ -631,9 +642,14 @@ export class GameScene extends Phaser.Scene {
     // from where the ball struck and a subtle push from the paddle's own motion.
     const vn = Math.abs(v.x * n.x + v.y * n.y);
     let vt = horizontal ? v.x : v.y;
-    const along = paddle.axisOf(body.position.x, body.position.y);
-    const offset = clamp((along - paddle.pos) / (PADDLES.length / 2), -1, 1);
-    vt += offset * PADDLES.english * speed;
+    if (paddle.fixed) {
+      // The full-width bar has no "ends" to aim with; a tiny random nudge keeps rebounds varied.
+      vt += randRange(-0.07, 0.07) * speed;
+    } else {
+      const along = paddle.axisOf(body.position.x, body.position.y);
+      const offset = clamp((along - paddle.pos) / (paddle.length / 2), -1, 1);
+      vt += offset * PADDLES.english * speed;
+    }
     const influence = clamp((paddle.vel / 60) * PADDLES.influence, -PADDLES.maxInfluence * speed, PADDLES.maxInfluence * speed);
     vt += influence;
     const vx = horizontal ? vt : vn * n.x;
@@ -660,7 +676,7 @@ export class GameScene extends Phaser.Scene {
     ball.impact(n.x, n.y, JUICE.ballSquash + (level >= 4 ? JUICE.ballSquashStrongBonus : 0));
     const outDeg = Math.atan2(n.y, n.x) * RAD_TO_DEG;
     this.juice.hitBurst(x + n.x * 4, y + n.y * 4, outDeg, ball.color, level);
-    this.juice.money(x + n.x * 64, y + n.y * 64, reward, level, combo >= ECONOMY.combo.max);
+    this.juice.money(x + n.x * 64, y + n.y * 64, reward, level, combo >= ECONOMY.combo.max, n.y > 0.5);
     c.audio.paddle(level, combo);
     const kick = Math.min(JUICE.cameraKickMax, JUICE.cameraKickBase + JUICE.cameraKickPerLevel * (level - 1));
     this.juice.kick(-n.x * kick, -n.y * kick);
@@ -834,12 +850,18 @@ export class GameScene extends Phaser.Scene {
     return 'ok';
   }
 
+  /** Merges every pair at the lowest level at once. */
   tryMerge(): PurchaseResult {
     if (this.isLocked()) return 'locked';
-    const pair = this.merger.findPair(this.balls);
-    if (!pair) return 'nomatch';
-    this.merger.start(pair[0], pair[1]);
+    const pairs = this.merger.findPairs(this.balls);
+    if (pairs.length === 0) return 'nomatch';
+    this.merger.start(pairs);
     return 'ok';
+  }
+
+  /** How many pairs the next merge would combine (for the button label). */
+  mergePairCount(): number {
+    return this.merger.pairCount(this.balls);
   }
 
   // =================================================================== map flow
@@ -904,6 +926,7 @@ export class GameScene extends Phaser.Scene {
       c.state.mapEarnings = 0;
       this.map.build(index);
       for (const p of this.paddles) p.setColor(this.map.def.palette.paddle);
+      this.topBar?.setColor(this.map.def.palette.paddle);
       this.layoutPaddlesEvenly();
       this.respawnAllBalls();
       this.persist();
@@ -936,6 +959,7 @@ export class GameScene extends Phaser.Scene {
     this.updateBoost(dt);
     this.autopilot?.update(this.boost);
     for (const p of this.paddles) p.update(dt);
+    this.topBar?.update(dt);
     this.updateRails();
 
     if (!c.orientationBlocked) this.stepPhysics(frameMs);

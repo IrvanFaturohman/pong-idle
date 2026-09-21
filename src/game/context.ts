@@ -30,7 +30,7 @@ export function createContext(mode: GameMode): GameContext {
     mode,
     state,
     saves,
-    economy: new EconomySystem(state),
+    economy: new EconomySystem(state, mode),
     audio,
     haptics: new Haptics(state.settings.haptics),
     modalOpen: false,

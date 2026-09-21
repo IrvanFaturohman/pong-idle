@@ -63,6 +63,7 @@ export class JuiceManager {
 
   private kickX = 0;
   private kickY = 0;
+  private lastKick = 0;
 
   constructor(private readonly scene: Phaser.Scene) {
     this.sparks = scene.add.particles(0, 0, TEX.dot, {
@@ -175,7 +176,7 @@ export class JuiceManager {
    * Floating "+$X". Hits that land close together in space and time are merged
    * into one growing number instead of stacking dozens of labels.
    */
-  money(x: number, y: number, amount: number, level: number, maxCombo: boolean): void {
+  money(x: number, y: number, amount: number, level: number, maxCombo: boolean, floatDown = false): void {
     const r2 = JUICE.floatTextMergeRadius * JUICE.floatTextMergeRadius;
     for (const f of this.floats) {
       if (!f.active || !f.isMoney || f.age > JUICE.floatTextMergeWindowMs) continue;
@@ -198,7 +199,8 @@ export class JuiceManager {
     f.duration = JUICE.floatTextMs;
     f.x = x;
     f.y = y;
-    f.rise = 110;
+    // Rewards from the top wall drift down into the arena instead of up into the HUD.
+    f.rise = floatDown ? -90 : 110;
     f.pop = 1;
     f.size = size;
     f.text
@@ -249,6 +251,9 @@ export class JuiceManager {
 
   /** Small directional nudge of the camera that springs back (used for strong hits). */
   kick(dx: number, dy: number): void {
+    const now = performance.now();
+    if (now - this.lastKick < JUICE.cameraKickMinIntervalMs) return;
+    this.lastKick = now;
     this.kickX += dx;
     this.kickY += dy;
     const len = Math.hypot(this.kickX, this.kickY);
