@@ -274,7 +274,14 @@ body {
   100% { transform: translate(70px, 100px); }
 }
 
-/* Classic: the player slides the bottom paddle. */
+/* Classic: the top wall is one full-width paddle; the player slides the bottom one. */
+.art-classic .pad-top {
+  left: 5px;
+  right: 5px;
+  width: auto;
+  margin-left: 0;
+}
+
 .slide {
   animation: slide-x 2.2s ease-in-out infinite alternate;
 }
